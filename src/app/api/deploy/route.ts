@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import fs from "fs/promises";
-import path from "path";
-import { exec } from "child-process-promise";
 import { randomUUID } from "crypto";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+// Base path for static sites (mounted volume in Docker)
+const STATIC_SITES_PATH = process.env.STATIC_SITES_PATH || "/var/www/static-sites";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -36,33 +37,18 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
   const appName = `site-${userId.slice(0, 6)}-${randomUUID().slice(0, 6)}`;
 
-  // Create temp directory
-  const tempDir = path.join(process.cwd(), "temp", appName);
-
   try {
-    await fs.mkdir(tempDir, { recursive: true });
+    // Create directory for the site
+    const sitePath = `${STATIC_SITES_PATH}/${appName}`;
+    await fs.mkdir(sitePath, { recursive: true });
 
     // Save HTML file as index.html
     const buffer = Buffer.from(await file.arrayBuffer());
-    const localFilePath = path.join(tempDir, "index.html");
-    await fs.writeFile(localFilePath, buffer);
-
-    // SSH configuration
-    const sshHost = process.env.SSH_HOST || "72.60.96.109";
-    const sshUser = process.env.SSH_USER || "root";
-    const sshKeyPath = process.env.SSH_KEY_PATH || "~/.ssh/hostinger";
-    const remotePath = `/var/www/static-sites/${appName}`;
-
-    // Create remote directory and upload file via SSH/SCP
-    await exec(
-      `ssh -i ${sshKeyPath} -o StrictHostKeyChecking=no ${sshUser}@${sshHost} "mkdir -p ${remotePath}"`
-    );
-    await exec(
-      `scp -i ${sshKeyPath} -o StrictHostKeyChecking=no "${localFilePath}" ${sshUser}@${sshHost}:${remotePath}/index.html`
-    );
+    await fs.writeFile(`${sitePath}/index.html`, buffer);
 
     // Generate deployed URL
-    const deployedUrl = `https://${appName}.sites.manishsingh.tech`;
+    const baseDomain = process.env.SITES_DOMAIN || "sites.manishsingh.tech";
+    const deployedUrl = `https://${appName}.${baseDomain}`;
 
     // Store deployment in database
     await prisma.deployment.create({
@@ -84,14 +70,6 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: errorMessage }, { status: 500 });
-
-  } finally {
-    // Cleanup temp directory
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (cleanupError) {
-      console.error("Failed to cleanup temp directory:", cleanupError);
-    }
   }
 }
 
