@@ -40,8 +40,9 @@ async function updateTraefikConfig() {
     const domain = `${appName}.${baseDomain}`;
     const safeName = appName.replace(/[^a-z0-9-]/g, "-");
 
+    const bt = '`';
     routers.push(`    static-sites-${safeName}:
-      rule: "Host(\\`${domain}\\`)"
+      rule: "Host(${bt}${domain}${bt})"
       service: static-sites-service
       middlewares:
         - redirect-to-https
@@ -49,7 +50,7 @@ async function updateTraefikConfig() {
         - web
       priority: 100
     static-sites-${safeName}-websecure:
-      rule: "Host(\\`${domain}\\`)"
+      rule: "Host(${bt}${domain}${bt})"
       service: static-sites-service
       entryPoints:
         - websecure
