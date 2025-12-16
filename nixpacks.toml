@@ -5,4 +5,4 @@ nixPkgs = ["nodejs_20", "bun"]
 cmds = ["bun install", "bunx prisma generate", "bun run build"]
 
 [start]
-cmd = "bun run start"
+cmd = "bunx prisma db push && bun run start"
