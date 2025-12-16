@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_20", "bun"]
 
 [phases.build]
-cmds = ["bun install --ignore-scripts", "bunx prisma generate", "bun run build"]
+cmds = ["bun install --ignore-scripts", "bunx prisma generate", "bun run build", "cp -r .next/static .next/standalone/.next/static", "cp -r public .next/standalone/public"]
 
 [start]
 cmd = "bunx prisma db push && node .next/standalone/server.js"
