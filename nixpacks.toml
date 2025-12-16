@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_20", "bun"]
 
 [phases.build]
-cmds = ["bun install", "bunx prisma generate", "bun run build"]
+cmds = ["bun install --ignore-scripts", "bunx prisma generate", "bun run build"]
 
 [start]
 cmd = "bunx prisma db push && bun run start"
