@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // NextAuth.js Models
@@ -64,12 +65,18 @@ model VerificationToken {
 
 // Custom Models for Deployment Tracking
 
+enum DeploymentStatus {
+  ACTIVE
+  PAUSED
+}
+
 model Deployment {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
-  appName   String   @unique
+  appName   String           @unique
   url       String
-  createdAt DateTime @default(now())
+  status    DeploymentStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
