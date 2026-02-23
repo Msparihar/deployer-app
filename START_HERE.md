@@ -239,3 +239,5 @@ Everything is implemented and ready to go. Just follow the Quick Start steps abo
 
 *Built with Next.js, NextAuth, Prisma, and Dokploy*
 
+
+

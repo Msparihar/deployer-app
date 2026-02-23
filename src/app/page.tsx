@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 
 interface Deployment {
@@ -22,6 +22,8 @@ export default function Home() {
   const [deleteTarget, setDeleteTarget] = useState<Deployment | null>(null);
   const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [confirmText, setConfirmText] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (session) {
@@ -141,27 +143,51 @@ export default function Home() {
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      setFile(droppedFile);
+      setError(null);
+      setDeployedUrl(null);
+    }
+  };
+
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-900">
-        <p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0b0f]">
+        <p className="text-sm text-white/40">Loading...</p>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-900">
-        <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg dark:bg-zinc-800">
-          <h1 className="mb-6 text-center text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0b0f]">
+        <div className="w-full max-w-md rounded-lg bg-[#1a1b1f] border border-white/[0.06] p-8">
+          <h1 className="mb-4 text-center text-lg font-medium text-white/90">
             HTML Deployer
           </h1>
-          <p className="mb-8 text-center text-zinc-600 dark:text-zinc-400">
+          <p className="mb-8 text-center text-sm text-white/40">
             Deploy your HTML files or ZIP archives instantly
           </p>
           <button
             onClick={() => signIn("google")}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+            className="w-full rounded-md bg-[#5e6ad2] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#6e7ae2]"
           >
             Login with Google
           </button>
@@ -171,19 +197,19 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <header className="border-b border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+    <div className="min-h-screen bg-[#0a0b0f]">
+      <header className="border-b border-white/[0.06] bg-[#1a1b1f]">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2.5">
+          <h1 className="text-sm font-medium tracking-tight text-white/90">
             HTML Deployer
           </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-white/50">
               {session.user?.name}
             </span>
             <button
               onClick={() => signOut()}
-              className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-600"
+              className="rounded-md bg-white/[0.06] px-3 py-1.5 text-xs text-white/70 transition-colors hover:bg-white/[0.1]"
             >
               Logout
             </button>
@@ -191,62 +217,83 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <div className="mb-8 rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-800">
-          <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+      <main className="mx-auto max-w-5xl px-4 py-6">
+        {/* Upload Section */}
+        <div className="mb-6 rounded-lg bg-[#1a1b1f] border border-white/[0.06] p-5">
+          <h2 className="mb-4 text-sm font-medium text-white/90">
             Deploy New Site
           </h2>
 
           <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="file-upload"
-                className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            <div
+              className={`drop-zone ${isDragging ? "drag-over" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {/* Upload icon */}
+              <svg
+                className="mx-auto mb-3 h-8 w-8 text-white/20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                Select HTML or ZIP File
-              </label>
-              <input
-                id="file-upload"
-                type="file"
-                accept=".html,.zip"
-                onChange={(e) => {
-                  setFile(e.target.files?.[0] || null);
-                  setError(null);
-                  setDeployedUrl(null);
-                }}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-4 file:rounded-md file:border-0 file:bg-zinc-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-50 dark:file:bg-zinc-600 dark:file:text-zinc-50"
-              />
-              {file && (
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  Selected: {file.name}
-                </p>
-              )}
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <p className="text-sm text-white/40">
+                Drop .html or .zip file here
+              </p>
+              <p className="mt-1 text-xs text-white/25">or click to browse</p>
             </div>
 
-            <button
-              onClick={handleUpload}
-              disabled={!file || isDeploying}
-              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-600"
-            >
-              {isDeploying ? "Deploying..." : "Deploy"}
-            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".html,.zip"
+              className="hidden"
+              onChange={(e) => {
+                setFile(e.target.files?.[0] || null);
+                setError(null);
+                setDeployedUrl(null);
+              }}
+            />
+
+            {file && (
+              <p className="text-xs text-white/50 font-mono">{file.name}</p>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleUpload}
+                disabled={!file || isDeploying}
+                className="rounded-md bg-[#5e6ad2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#6e7ae2] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isDeploying ? "Deploying..." : "Deploy"}
+              </button>
+            </div>
 
             {error && (
-              <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                {error}
+              <div className="border-l-2 border-red-400 bg-red-400/[0.05] pl-3 py-2">
+                <p className="text-xs text-red-400">{error}</p>
               </div>
             )}
 
             {deployedUrl && (
-              <div className="rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
-                <p className="mb-2 text-sm font-medium text-green-800 dark:text-green-400">
+              <div className="border-l-2 border-green-400 bg-green-400/[0.05] pl-3 py-2">
+                <p className="mb-1 text-xs text-green-400">
                   Deployment successful!
                 </p>
                 <a
                   href={deployedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="text-xs font-mono text-[#5e6ad2] hover:text-[#7e8ae2]"
                 >
                   {deployedUrl}
                 </a>
@@ -255,78 +302,165 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-800">
-          <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-            Your Deployments
-          </h2>
+        {/* Deployments Section */}
+        <div className="rounded-lg bg-[#1a1b1f] border border-white/[0.06]">
+          <div className="px-4 py-3">
+            <h2 className="text-sm font-medium text-white/90">
+              Your Deployments
+            </h2>
+          </div>
 
           {deployments.length === 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              No deployments yet. Deploy your first site above!
-            </p>
+            <div className="flex flex-col items-center justify-center py-16">
+              {/* Package/box icon */}
+              <svg
+                className="mb-3 h-10 w-10 text-white/10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+              <p className="text-sm text-white/30">
+                No deployments yet. Deploy your first site above.
+              </p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div>
+              {/* Column headers */}
+              <div className="grid grid-cols-[1fr_100px_1fr_140px_120px] gap-4 items-center px-4 py-2 border-b border-white/[0.04]">
+                <span className="text-[11px] uppercase tracking-wider text-white/30 font-medium">
+                  Name
+                </span>
+                <span className="text-[11px] uppercase tracking-wider text-white/30 font-medium">
+                  Status
+                </span>
+                <span className="text-[11px] uppercase tracking-wider text-white/30 font-medium">
+                  URL
+                </span>
+                <span className="text-[11px] uppercase tracking-wider text-white/30 font-medium">
+                  Created
+                </span>
+                <span className="text-[11px] uppercase tracking-wider text-white/30 font-medium text-right">
+                  Actions
+                </span>
+              </div>
+
+              {/* Deployment rows */}
               {deployments.map((deployment) => (
                 <div
                   key={deployment.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-200 p-4 dark:border-zinc-700"
+                  className="grid grid-cols-[1fr_100px_1fr_140px_120px] gap-4 items-center px-4 py-2.5 hover:bg-white/[0.02] transition-colors border-t border-white/[0.04]"
                 >
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                          {deployment.appName}
-                        </p>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            deployment.status === "ACTIVE"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          }`}
-                        >
-                          {deployment.status === "ACTIVE" ? "Active" : "Paused"}
-                        </span>
-                      </div>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                        {new Date(deployment.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
+                  {/* App name */}
+                  <span className="text-sm font-mono text-white/80 truncate">
+                    {deployment.appName}
+                  </span>
+
+                  {/* Status */}
                   <div className="flex items-center gap-2">
+                    <div
+                      className={`h-2 w-2 rounded-full ${
+                        deployment.status === "ACTIVE"
+                          ? "bg-green-400 animate-status-pulse"
+                          : "bg-amber-400"
+                      }`}
+                    />
+                    <span className="text-xs text-white/50">
+                      {deployment.status === "ACTIVE" ? "Active" : "Paused"}
+                    </span>
+                  </div>
+
+                  {/* URL */}
+                  {deployment.status === "ACTIVE" ? (
+                    <a
+                      href={deployment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-mono text-[#5e6ad2] hover:text-[#7e8ae2] truncate"
+                    >
+                      {deployment.url}
+                    </a>
+                  ) : (
+                    <span className="text-xs font-mono text-white/20 truncate">
+                      {deployment.url}
+                    </span>
+                  )}
+
+                  {/* Created */}
+                  <span className="text-xs text-white/40">
+                    {new Date(deployment.createdAt).toLocaleDateString()}
+                  </span>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-1">
+                    {/* Pause/Resume button */}
                     <button
                       onClick={() => handlePauseResume(deployment)}
                       disabled={actionLoading === deployment.id}
-                      className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                        deployment.status === "ACTIVE"
-                          ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
-                          : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
-                      }`}
+                      className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={deployment.status === "ACTIVE" ? "Pause" : "Resume"}
                     >
-                      {actionLoading === deployment.id
-                        ? "..."
-                        : deployment.status === "ACTIVE"
-                          ? "Pause"
-                          : "Resume"}
+                      {actionLoading === deployment.id ? (
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="12" />
+                        </svg>
+                      ) : deployment.status === "ACTIVE" ? (
+                        /* Pause icon */
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                          <rect x="6" y="4" width="4" height="16" rx="1" />
+                          <rect x="14" y="4" width="4" height="16" rx="1" />
+                        </svg>
+                      ) : (
+                        /* Play icon */
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6,4 20,12 6,20" />
+                        </svg>
+                      )}
                     </button>
+
+                    {/* Delete button */}
                     <button
                       onClick={() => handleDeleteClick(deployment)}
                       disabled={actionLoading === deployment.id}
-                      className="rounded-lg bg-red-100 px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                      className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-white/[0.06] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Delete"
                     >
-                      Delete
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
                     </button>
+
+                    {/* Visit button */}
                     {deployment.status === "ACTIVE" ? (
                       <a
                         href={deployment.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                        className="p-1.5 rounded-md text-white/30 hover:text-[#5e6ad2] hover:bg-white/[0.06] transition-colors"
+                        title="Visit"
                       >
-                        Visit
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
                       </a>
                     ) : (
-                      <span className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400">
-                        Visit
+                      <span className="p-1.5 rounded-md text-white/10 cursor-not-allowed">
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
                       </span>
                     )}
                   </div>
@@ -339,16 +473,16 @@ export default function Home() {
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-[#1a1b1f] border border-white/[0.06] p-6 animate-slide-up">
             {deleteStep === 1 ? (
               <>
-                <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                <h3 className="mb-4 text-sm font-medium text-white/90">
                   Delete Deployment
                 </h3>
-                <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mb-6 text-sm text-white/50">
                   Are you sure you want to delete{" "}
-                  <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                  <span className="text-white/90 font-mono">
                     {deleteTarget.appName}
                   </span>
                   ? This action cannot be undone.
@@ -356,13 +490,13 @@ export default function Home() {
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={handleDeleteCancel}
-                    className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-600"
+                    className="rounded-md bg-white/[0.06] px-4 py-2 text-sm text-white/70 transition-colors hover:bg-white/[0.1]"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDeleteContinue}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+                    className="rounded-md bg-red-500/80 px-4 py-2 text-sm text-white transition-colors hover:bg-red-500"
                   >
                     Continue
                   </button>
@@ -370,16 +504,14 @@ export default function Home() {
               </>
             ) : (
               <>
-                <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                <h3 className="mb-4 text-sm font-medium text-white/90">
                   Confirm Deletion
                 </h3>
-                <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mb-4 text-sm text-white/50">
                   Type{" "}
-                  <span className="font-mono font-medium text-zinc-900 dark:text-zinc-50">
-                    confirm
-                  </span>{" "}
+                  <span className="text-white/90 font-mono">confirm</span>{" "}
                   to permanently delete{" "}
-                  <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                  <span className="text-white/90 font-mono">
                     {deleteTarget.appName}
                   </span>
                   .
@@ -389,19 +521,19 @@ export default function Home() {
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder="Type 'confirm'"
-                  className="mb-6 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-50"
+                  className="mb-6 w-full rounded-md bg-white/[0.04] border border-white/[0.08] px-3 py-2 text-sm text-white/90 focus:border-white/[0.15] focus:outline-none placeholder:text-white/20"
                 />
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={handleDeleteCancel}
-                    className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-600"
+                    className="rounded-md bg-white/[0.06] px-4 py-2 text-sm text-white/70 transition-colors hover:bg-white/[0.1]"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDeleteConfirm}
                     disabled={confirmText !== "confirm" || actionLoading === deleteTarget.id}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-400"
+                    className="rounded-md bg-red-500/80 px-4 py-2 text-sm text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {actionLoading === deleteTarget.id ? "Deleting..." : "Delete"}
                   </button>
